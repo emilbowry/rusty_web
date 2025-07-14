@@ -173,73 +173,146 @@ impl<'buf, 'h> TryFrom<Request<'buf, 'h>> for HttpRequest {
 }
 
 
-fn run_test(test_name: &str, request_bytes: &[u8], header_buf_size: usize) {
-    println!("--- Running Test: {} ---", test_name);
+// fn run_test(test_name: &str, request_bytes: &[u8], header_buf_size: usize) {
+//     println!("--- Running Test: {} ---", test_name);
     
-    let mut headers = vec![Header { name: "", value: &[] }; header_buf_size];
+//     let mut headers = vec![Header { name: "", value: &[] }; header_buf_size];
 
-    match parse_request(request_bytes, &mut headers) {
-        Ok((request, bytes_consumed)) => {
-            println!("✅ Success! Parsed {} bytes.", bytes_consumed);
-            println!("{:#?}\n", request);
-        }
-        Err(e) => {
-            println!("✅ Success! Correctly failed with error: {:?}\n", e);
-        }
-    }
+//     match parse_request(request_bytes, &mut headers) {
+//         Ok((request, bytes_consumed)) => {
+//             println!("✅ Success! Parsed {} bytes.", bytes_consumed);
+//             println!("{:#?}\n", request);
+//         }
+//         Err(e) => {
+//             println!("✅ Success! Correctly failed with error: {:?}\n", e);
+//         }
+//     }
+// }
+
+
+// fn main() {
+//     println!("--- Running Low-Level Parser Test Suite ---\n");
+
+//     // --- All original tests remain the same ---
+//     run_test("Passing Case (GET with headers)", b"GET /test HTTP/1.1\r\nHost: example.com\r\nConnection: keep-alive\r\n\r\n", MAX_HEADERS);
+//     run_test("Error Case: Partial (incomplete request)", b"GET /test HTTP/1.1\r\nHost: examp", MAX_HEADERS);
+//     run_test("Error Case: InvalidMethod (no method)", b" /test HTTP/1.1\r\n\r\n", MAX_HEADERS);
+//     run_test("Error Case: InvalidPath (no path)", b"GET \r\n\r\n", MAX_HEADERS);
+//     run_test("Error Case: InvalidVersion (no version)", b"GET /test\r\n\r\n", MAX_HEADERS);
+//     run_test("Error Case: InvalidHeader (no colon)", b"GET /test HTTP/1.1\r\nHost example.com\r\n\r\n", MAX_HEADERS);
+//     run_test("Error Case: TooManyHeaders", b"GET /test HTTP/1.1\r\nHeader1: a\r\nHeader2: b\r\nHeader3: c\r\n\r\n", 2);
+
+//     println!("\n--- Running High-Level Conversion Test Suite ---\n");
+
+//     // --- Test 8: High-Level Conversion (POST with body) ---
+//     println!("--- Running Test: High-Level Conversion (POST with body) ---");
+    
+//     // THE FIX: Content-Length is now correctly set to 17.
+//     let post_req_bytes = b"POST /api/users HTTP/1.1\r\n\
+// Content-Type: application/json\r\n\
+// Content-Length: 17\r\n\
+// Host: localhost\r\n\
+// \r\n\
+// {\"user\": \"alice\"}";
+
+//     let mut headers = vec![Header { name: "", value: &[] }; MAX_HEADERS];
+    
+//     match parse_request(post_req_bytes, &mut headers) {
+//         Ok((parsed_req, _)) => {
+//             println!("✅ Low-level parser succeeded.");
+            
+//             match HttpRequest::try_from(parsed_req) {
+//                 Ok(http_request) => {
+//                     println!("✅ High-level conversion succeeded!");
+//                     println!("{:#?}\n", http_request);
+
+//                     // Assertions now check for the correct values.
+//                     assert_eq!(http_request.method, Method::Post);
+//                     assert_eq!(http_request.path, "/api/users");
+//                     assert_eq!(http_request.headers.get("content-type").unwrap(), b"application/json");
+//                     assert_eq!(http_request.headers.get("content-length").unwrap(), b"17");
+//                     assert_eq!(http_request.body, b"{\"user\": \"alice\"}");
+//                 }
+//                 Err(e) => {
+//                     println!("❌ High-level conversion failed with error: {:?}", e);
+//                 }
+//             }
+//         }
+//         Err(e) => {
+//             println!("❌ Low-level parser failed with error: {:?}", e);
+//         }
+//     }
+// }
+
+#[derive(Debug)]
+pub struct Response {
+    pub status_code: u16,
+    pub status_text: String,
+    pub headers: HashMap<String, String>,
+    pub body: Option<Vec<u8>>,
 }
 
-
-fn main() {
-    println!("--- Running Low-Level Parser Test Suite ---\n");
-
-    // --- All original tests remain the same ---
-    run_test("Passing Case (GET with headers)", b"GET /test HTTP/1.1\r\nHost: example.com\r\nConnection: keep-alive\r\n\r\n", MAX_HEADERS);
-    run_test("Error Case: Partial (incomplete request)", b"GET /test HTTP/1.1\r\nHost: examp", MAX_HEADERS);
-    run_test("Error Case: InvalidMethod (no method)", b" /test HTTP/1.1\r\n\r\n", MAX_HEADERS);
-    run_test("Error Case: InvalidPath (no path)", b"GET \r\n\r\n", MAX_HEADERS);
-    run_test("Error Case: InvalidVersion (no version)", b"GET /test\r\n\r\n", MAX_HEADERS);
-    run_test("Error Case: InvalidHeader (no colon)", b"GET /test HTTP/1.1\r\nHost example.com\r\n\r\n", MAX_HEADERS);
-    run_test("Error Case: TooManyHeaders", b"GET /test HTTP/1.1\r\nHeader1: a\r\nHeader2: b\r\nHeader3: c\r\n\r\n", 2);
-
-    println!("\n--- Running High-Level Conversion Test Suite ---\n");
-
-    // --- Test 8: High-Level Conversion (POST with body) ---
-    println!("--- Running Test: High-Level Conversion (POST with body) ---");
-    
-    // THE FIX: Content-Length is now correctly set to 17.
-    let post_req_bytes = b"POST /api/users HTTP/1.1\r\n\
-Content-Type: application/json\r\n\
-Content-Length: 17\r\n\
-Host: localhost\r\n\
-\r\n\
-{\"user\": \"alice\"}";
-
-    let mut headers = vec![Header { name: "", value: &[] }; MAX_HEADERS];
-    
-    match parse_request(post_req_bytes, &mut headers) {
-        Ok((parsed_req, _)) => {
-            println!("✅ Low-level parser succeeded.");
-            
-            match HttpRequest::try_from(parsed_req) {
-                Ok(http_request) => {
-                    println!("✅ High-level conversion succeeded!");
-                    println!("{:#?}\n", http_request);
-
-                    // Assertions now check for the correct values.
-                    assert_eq!(http_request.method, Method::Post);
-                    assert_eq!(http_request.path, "/api/users");
-                    assert_eq!(http_request.headers.get("content-type").unwrap(), b"application/json");
-                    assert_eq!(http_request.headers.get("content-length").unwrap(), b"17");
-                    assert_eq!(http_request.body, b"{\"user\": \"alice\"}");
-                }
-                Err(e) => {
-                    println!("❌ High-level conversion failed with error: {:?}", e);
-                }
-            }
+impl Response {
+    /// Creates a new Response with a status code, text, and optional body.
+    pub fn new(status_code: u16, status_text: String, body: Option<Vec<u8>>) -> Self {
+        Response {
+            status_code,
+            status_text,
+            headers: HashMap::new(),
+            body,
         }
-        Err(e) => {
-            println!("❌ Low-level parser failed with error: {:?}", e);
+    }
+
+    /// Helper to create a `200 OK` response with a given body and content type.
+    pub fn ok(body: Vec<u8>, content_type: &str) -> Self {
+        let mut res = Response::new(200, "OK".to_string(), Some(body));
+        res.headers.insert("Content-Type".to_string(), content_type.to_string());
+        res
+    }
+
+    /// Helper to create a standard `404 Not Found` response.
+    pub fn not_found() -> Self {
+        let body = "<h1>404 Not Found</h1>".as_bytes().to_vec();
+        let mut res = Response::new(404, "Not Found".to_string(), Some(body));
+        res.headers.insert("Content-Type".to_string(), "text/html".to_string());
+        res
+    }
+
+    /// Helper to create a standard `400 Bad Request` response.
+    pub fn bad_request() -> Self {
+        let body = "<h1>400 Bad Request</h1>".as_bytes().to_vec();
+        let mut res = Response::new(400, "Bad Request".to_string(), Some(body));
+        res.headers.insert("Content-Type".to_string(), "text/html".to_string());
+        res
+    }
+
+    /// Serializes the Response struct into a `Vec<u8>` of raw HTTP response bytes.
+    pub fn into_bytes(&self) -> Vec<u8> {
+        // Start with the status line, e.g., "HTTP/1.1 200 OK\r\n"
+        let status_line = format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_text);
+
+        // Create a mutable string for headers
+        let mut headers_str = String::new();
+
+        // Add all headers from the HashMap
+        for (name, value) in &self.headers {
+            headers_str.push_str(&format!("{}: {}\r\n", name, value));
         }
+        
+        // Automatically calculate and add the Content-Length header based on the body's size.
+        let content_length = self.body.as_ref().map_or(0, |b| b.len());
+        headers_str.push_str(&format!("Content-Length: {}\r\n", content_length));
+
+        // Combine the status line, headers, the final CRLF, and the body.
+        let mut response_bytes = Vec::new();
+        response_bytes.extend_from_slice(status_line.as_bytes());
+        response_bytes.extend_from_slice(headers_str.as_bytes());
+        response_bytes.extend_from_slice(b"\r\n"); // The empty line separating headers from body
+
+        if let Some(body) = &self.body {
+            response_bytes.extend_from_slice(body);
+        }
+
+        response_bytes
     }
 }
