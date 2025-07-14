@@ -6,8 +6,8 @@ use std::io::{Read, Write};
 // 1. Declare the http module. Rust will look for `src/http/mod.rs`.
 mod http;
 
-// 2. Import the necessary types from our new module and the standard library.
-use http::{HttpRequest, Method, ParseError, Header};
+// 2. Import the necessary types. Note that `ParseError` is removed as it was unused.
+use http::{HttpRequest, Method, Header};
 
 /// The entry point of our server application.
 fn main() {
@@ -66,7 +66,8 @@ fn handle_connection(mut stream: TcpStream) {
             match HttpRequest::try_from(borrowed_request) {
                 Ok(request) => {
                     // The request is fully parsed and validated. Pass it to the router.
-                    println!("Successfully parsed request: {} {}", request.method, request.path);
+                    // THIS IS THE CORRECTED LINE:
+                    println!("Successfully parsed request: {:?} {}", request.method, request.path);
                     route_request(request, &mut stream);
                 }
                 Err(e) => {
@@ -123,9 +124,8 @@ fn route_request(request: HttpRequest, stream: &mut TcpStream) {
 fn send_error_response(stream: &mut TcpStream, status_line: &str, message: &str) {
     let response_body = format!("<h1>{}</h1><p>{}</p>", status_line, message);
     let response = format!(
-        "HTTP/1.1 {}\r\nContent-Length: {}\r\n\r\n{}",
+        "HTTP/1.1 {}\r\n\r\n{}",
         status_line,
-        response_body.len(),
         response_body
     );
     stream.write_all(response.as_bytes()).unwrap_or_else(|e| eprintln!("Failed to write error response: {}", e));
