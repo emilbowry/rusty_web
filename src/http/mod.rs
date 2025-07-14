@@ -118,7 +118,24 @@ impl TrimStart for [u8] {
 
 // --- NEW: Application-Level (Owned) HTTP Types ---
 
-#[derive(Debug, PartialEq)]
+// #[derive(Debug, PartialEq)]
+// pub enum Method {
+//     Get,
+//     Post,
+//     Put,
+//     Delete,
+//     Head,
+//     Options,
+//     Connect,
+//     Patch,
+//     Trace,
+// }
+// In src/http/mod.rs
+
+// ... other code ...
+
+// THIS IS THE LINE TO CHANGE
+#[derive(Debug, PartialEq, Clone)] // <-- Add Clone here
 pub enum Method {
     Get,
     Post,
@@ -131,6 +148,7 @@ pub enum Method {
     Trace,
 }
 
+// ... rest of the file is the same ...
 #[derive(Debug, PartialEq)]
 pub struct HttpRequest {
     pub method: Method,
@@ -244,7 +262,7 @@ impl<'buf, 'h> TryFrom<Request<'buf, 'h>> for HttpRequest {
 //     }
 // }
 
-#[derive(Debug)]
+# [derive(Debug)]
 pub struct Response {
     pub status_code: u16,
     pub status_text: String,
