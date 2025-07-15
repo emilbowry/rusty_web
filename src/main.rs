@@ -1,53 +1,38 @@
 // src/main.rs
 
-// --- NEW IMPORTS ---
-// We now use Tokio's I/O types and traits.
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-// 1. Declare the http module (no change here)
 mod http;
-
-// 2. Import our HTTP types (no change here)
 use http::{HttpRequest, Method, Header, Response};
 
-/// The entry point of our server application.
-/// The `#[tokio::main]` macro sets up the asynchronous runtime.
 #[tokio::main]
 async fn main() {
-    // Bind the listener to the address. Note that this is now `tokio::net::TcpListener`.
-    let listener = TcpListener::bind("127.0.0.1:7878").await.expect("Failed to bind to address");
-    println!("Async Server listening on http://127.0.0.1:7878");
+    // --- THIS IS THE LINE TO CHANGE ---
+    // Bind to 0.0.0.0 to accept connections from outside the VM (via port forwarding).
+    let listener = TcpListener::bind("0.0.0.0:7878").await.expect("Failed to bind to address");
+    
+    println!("Async Server listening on 0.0.0.0:7878");
 
-    // The main server loop.
     loop {
-        // Asynchronously wait for an inbound connection.
-        // `accept()` returns a tuple of `(socket, address)`.
         match listener.accept().await {
             Ok((stream, _)) => {
                 println!("\n--- New Connection Accepted ---");
-                // A new connection has been established.
-                // Spawn a new asynchronous task to handle this connection.
-                // The `move` keyword transfers ownership of the `stream` to the new task.
                 tokio::spawn(async move {
                     handle_connection(stream).await;
                 });
             }
             Err(e) => {
-                // A connection attempt failed.
                 eprintln!("Connection failed: {}", e);
             }
         }
     }
 }
 
-/// Handles a single connection. The function is now `async`.
-/// It takes a `tokio::net::TcpStream` instead of a `std::net::TcpStream`.
 async fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 2048];
     let mut headers = [Header { name: "", value: &[] }; 32];
 
-    // Asynchronously read data from the stream.
     let bytes_read = match stream.read(&mut buffer).await {
         Ok(0) => { println!("Client disconnected gracefully."); return; },
         Ok(n) => n,
@@ -72,16 +57,11 @@ async fn handle_connection(mut stream: TcpStream) {
         }
     };
 
-    // Asynchronously write the final, serialized response to the stream.
     stream.write_all(&response.into_bytes()).await.unwrap_or_else(|e| eprintln!("Failed to write response: {}", e));
-    // Asynchronously flush the stream.
     stream.flush().await.unwrap_or_else(|e| eprintln!("Failed to flush stream: {}", e));
 }
 
-// --- NO CHANGES BELOW THIS LINE ---
-// These functions are CPU-bound and do not need to be async.
-
-// --- MIDDLEWARE LAYER ---
+// --- NO CHANGES TO MIDDLEWARE OR ROUTER ---
 
 fn add_cors_headers(request: HttpRequest) -> Response {
     let mut response = log_request(request);
@@ -96,8 +76,6 @@ fn log_request(request: HttpRequest) -> Response {
     println!("-> Request: {:?} {} -> Response: {} {}", method, path, response.status_code, response.status_text);
     response
 }
-
-// --- ROUTER / HANDLER LAYER ---
 
 fn route_request(request: HttpRequest) -> Response {
     match (&request.method, request.path.as_str()) {
