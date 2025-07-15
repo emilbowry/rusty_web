@@ -30,7 +30,8 @@ async fn main() {
 }
 
 async fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 2048];
+    // let mut buffer = [0; 2048];
+    let mut buffer = [0; 8192];
     let mut headers = [Header { name: "", value: &[] }; 32];
 
     let bytes_read = match stream.read(&mut buffer).await {
