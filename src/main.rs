@@ -8,8 +8,9 @@ mod http;
 use http::{HttpRequest, Method, Header, Response};
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:7878").expect("Failed to bind to address");
-    println!("Server listening on http://127.0.0.1:7878");
+    // let listener = TcpListener::bind("127.0.0.1:7878").expect("Failed to bind to address");
+    let listener = TcpListener::bind("0.0.0.0:7878").expect("Failed to bind to address");
+    println!("Server listening on http://0.0.0.0:7878");
 
     for stream in listener.incoming() {
         match stream {
