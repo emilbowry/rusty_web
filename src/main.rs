@@ -10,7 +10,7 @@ use http::{HttpRequest, Method, Header, Response};
 async fn main() {
     // --- THIS IS THE LINE TO CHANGE ---
     // Bind to 0.0.0.0 to accept connections from outside the VM (via port forwarding).
-    let listener = TcpListener::bind("127.0.0.1:7878").await.expect("Failed to bind to address");
+    let listener = TcpListener::bind("0.0.0.0:7878").await.expect("Failed to bind to address");
     
     println!("Async Server listening on 0.0.0.0:7878");
 
@@ -30,7 +30,8 @@ async fn main() {
 }
 
 async fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 2048];
+    // let mut buffer = [0; 2048];
+    let mut buffer = [0; 8192];
     let mut headers = [Header { name: "", value: &[] }; 32];
 
     let bytes_read = match stream.read(&mut buffer).await {
