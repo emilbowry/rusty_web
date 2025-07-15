@@ -27,7 +27,7 @@ pub struct Request<'buf, 'h> {
     pub body: &'buf [u8],
 }
 
-const MAX_HEADERS: usize = 32;
+// const MAX_HEADERS: usize = 32; //idk WHY THIS DISAPEARED 
 
 pub fn parse_request<'buf, 'h>(
     buffer: &'buf [u8],
