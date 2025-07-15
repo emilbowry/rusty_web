@@ -77,16 +77,31 @@ fn log_request(request: HttpRequest) -> Response {
     response
 }
 
+// In src/main.rs
+
 fn route_request(request: HttpRequest) -> Response {
     match (&request.method, request.path.as_str()) {
         (Method::Get, "/") => {
             let body = "<h1>Welcome!</h1><p>This is the ASYNCHRONOUS Rusty Web server.</p>".as_bytes().to_vec();
             Response::ok(body, "text/html")
         }
+
+        // --- ADD THIS NEW MATCH ARM ---
+        // Handle the CORS preflight request for the API endpoint.
+        (Method::Options, "/api/message") => {
+            let mut res = Response::no_content();
+            // Tell the browser which methods and headers are allowed.
+            res.headers.insert("Access-Control-Allow-Methods".to_string(), "GET, OPTIONS".to_string());
+            res.headers.insert("Access-Control-Allow-Headers".to_string(), "Content-Type".to_string());
+            res
+        }
+        // -----------------------------
+
         (Method::Get, "/api/message") => {
             let body = r#"{"framework":"Rusty Web","status":"async and awesome"}"#.as_bytes().to_vec();
             Response::ok(body, "application/json")
         }
+        
         _ => Response::not_found(),
     }
 }

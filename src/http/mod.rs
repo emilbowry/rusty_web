@@ -227,7 +227,9 @@ impl Response {
         res.headers.insert("Content-Type".to_string(), "text/html".to_string());
         res
     }
-
+    pub fn no_content() -> Self {
+        Response::new(204, "No Content".to_string(), None)
+    }
     pub fn into_bytes(&self) -> Vec<u8> {
         let status_line = format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_text);
 
