@@ -27,7 +27,6 @@ pub struct Request<'buf, 'h> {
     pub body: &'buf [u8],
 }
 
-// const MAX_HEADERS: usize = 32; //idk WHY THIS DISAPEARED 
 
 pub fn parse_request<'buf, 'h>(
     buffer: &'buf [u8],
@@ -191,6 +190,73 @@ impl<'buf, 'h> TryFrom<Request<'buf, 'h>> for HttpRequest {
 }
 
 
+# [derive(Debug)]
+pub struct Response {
+    pub status_code: u16,
+    pub status_text: String,
+    pub headers: HashMap<String, String>,
+    pub body: Option<Vec<u8>>,
+}
+
+impl Response {
+    pub fn new(status_code: u16, status_text: String, body: Option<Vec<u8>>) -> Self {
+        Response {
+            status_code,
+            status_text,
+            headers: HashMap::new(),
+            body,
+        }
+    }
+
+    pub fn ok(body: Vec<u8>, content_type: &str) -> Self {
+        let mut res = Response::new(200, "OK".to_string(), Some(body));
+        res.headers.insert("Content-Type".to_string(), content_type.to_string());
+        res
+    }
+
+    pub fn not_found() -> Self {
+        let body = "<h1>404 Not Found</h1>".as_bytes().to_vec();
+        let mut res = Response::new(404, "Not Found".to_string(), Some(body));
+        res.headers.insert("Content-Type".to_string(), "text/html".to_string());
+        res
+    }
+
+    pub fn bad_request() -> Self {
+        let body = "<h1>400 Bad Request</h1>".as_bytes().to_vec();
+        let mut res = Response::new(400, "Bad Request".to_string(), Some(body));
+        res.headers.insert("Content-Type".to_string(), "text/html".to_string());
+        res
+    }
+
+    pub fn into_bytes(&self) -> Vec<u8> {
+        let status_line = format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_text);
+
+        let mut headers_str = String::new();
+
+        for (name, value) in &self.headers {
+            headers_str.push_str(&format!("{}: {}\r\n", name, value));
+        }
+        
+        let content_length = self.body.as_ref().map_or(0, |b| b.len());
+        headers_str.push_str(&format!("Content-Length: {}\r\n", content_length));
+
+        // Combine the status line, headers, the final CRLF, and the body.
+        let mut response_bytes = Vec::new();
+        response_bytes.extend_from_slice(status_line.as_bytes());
+        response_bytes.extend_from_slice(headers_str.as_bytes());
+        response_bytes.extend_from_slice(b"\r\n"); // The empty line separating headers from body
+
+        if let Some(body) = &self.body {
+            response_bytes.extend_from_slice(body);
+        }
+
+        response_bytes
+    }
+}
+
+
+
+
 // fn run_test(test_name: &str, request_bytes: &[u8], header_buf_size: usize) {
 //     println!("--- Running Test: {} ---", test_name);
     
@@ -261,76 +327,3 @@ impl<'buf, 'h> TryFrom<Request<'buf, 'h>> for HttpRequest {
 //         }
 //     }
 // }
-
-# [derive(Debug)]
-pub struct Response {
-    pub status_code: u16,
-    pub status_text: String,
-    pub headers: HashMap<String, String>,
-    pub body: Option<Vec<u8>>,
-}
-
-impl Response {
-    /// Creates a new Response with a status code, text, and optional body.
-    pub fn new(status_code: u16, status_text: String, body: Option<Vec<u8>>) -> Self {
-        Response {
-            status_code,
-            status_text,
-            headers: HashMap::new(),
-            body,
-        }
-    }
-
-    /// Helper to create a `200 OK` response with a given body and content type.
-    pub fn ok(body: Vec<u8>, content_type: &str) -> Self {
-        let mut res = Response::new(200, "OK".to_string(), Some(body));
-        res.headers.insert("Content-Type".to_string(), content_type.to_string());
-        res
-    }
-
-    /// Helper to create a standard `404 Not Found` response.
-    pub fn not_found() -> Self {
-        let body = "<h1>404 Not Found</h1>".as_bytes().to_vec();
-        let mut res = Response::new(404, "Not Found".to_string(), Some(body));
-        res.headers.insert("Content-Type".to_string(), "text/html".to_string());
-        res
-    }
-
-    /// Helper to create a standard `400 Bad Request` response.
-    pub fn bad_request() -> Self {
-        let body = "<h1>400 Bad Request</h1>".as_bytes().to_vec();
-        let mut res = Response::new(400, "Bad Request".to_string(), Some(body));
-        res.headers.insert("Content-Type".to_string(), "text/html".to_string());
-        res
-    }
-
-    /// Serializes the Response struct into a `Vec<u8>` of raw HTTP response bytes.
-    pub fn into_bytes(&self) -> Vec<u8> {
-        // Start with the status line, e.g., "HTTP/1.1 200 OK\r\n"
-        let status_line = format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_text);
-
-        // Create a mutable string for headers
-        let mut headers_str = String::new();
-
-        // Add all headers from the HashMap
-        for (name, value) in &self.headers {
-            headers_str.push_str(&format!("{}: {}\r\n", name, value));
-        }
-        
-        // Automatically calculate and add the Content-Length header based on the body's size.
-        let content_length = self.body.as_ref().map_or(0, |b| b.len());
-        headers_str.push_str(&format!("Content-Length: {}\r\n", content_length));
-
-        // Combine the status line, headers, the final CRLF, and the body.
-        let mut response_bytes = Vec::new();
-        response_bytes.extend_from_slice(status_line.as_bytes());
-        response_bytes.extend_from_slice(headers_str.as_bytes());
-        response_bytes.extend_from_slice(b"\r\n"); // The empty line separating headers from body
-
-        if let Some(body) = &self.body {
-            response_bytes.extend_from_slice(body);
-        }
-
-        response_bytes
-    }
-}
